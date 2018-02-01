@@ -1,0 +1,15 @@
+{
+  "name": "cbpp_map",
+  "version": "0.8.0",
+  "description": "Wrapper for CBPP Pie Charts",
+  "main": "cbpp_pie.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nick Kasprak",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "browserify-css": "^0.14.0"
+  }
+}
