@@ -84,9 +84,15 @@ module.exports = function(p, selector) {
             p.testPoints = [];
         }
         var path = "M0," + y + "L"+$(p.selector).width() + ","+y;
-        p.testLine = p.paper.path("M0," + y + "L"+$(selector).width() + ","+y);
+        p.testLine = p.paper.append("path")
+          .attr("d","M0," + y + "L"+$(selector).width() + ","+y);
         for (i = 0, ii = points.length; i<ii; i++) {
-            p.testPoints.push(p.paper.rect(points[i],y,2,2));
+            p.testPoints.push(p.paper.append("rect")
+              .attr("x",points[i])
+              .attr("y",y)
+              .attr("width",2)
+              .attr("height",2)
+            );
         }
     }
 
@@ -104,12 +110,16 @@ module.exports = function(p, selector) {
             }
         }
         for (var i = 0, ii = p.sectorObjs.length; i<ii; i++) {
-            path = p.sectorObjs[i].attr("path");
-            center = [path[0][1], path[0][2]];
+            path = p.sectorObjs[i].attr("d").split(/(?=[LMCAlmca])/);
+            for (var j = 0, jj = path.length; j<jj; j++) {
+              path[j] = path[j].slice(1);
+              path[j] = path[j].split(",");
+            }
+            center = [path[0][0]*1, path[0][1]*1];
             top = p.options["margin-y"]*p.height;
             bottom = p.height - p.options["margin-y"]*p.height;
-            p1 = [path[1][1], path[1][2]];
-            p2 = [path[2][6], path[2][7]];
+            p1 = [path[1][0]*1, path[1][1]*1];
+            p2 = [path[2][5]*1, path[2][6]*1];
             if (side === "right") {
                 swap = p1;
                 p1 = p2;
@@ -169,9 +179,15 @@ module.exports = function(p, selector) {
         }
         p.testRegions = [];
         for (var i = 0, ii = regions.length; i<ii; i++) {
-            p.testRegions.push(p.paper.path("M0," + regions[i][0][0] + " L"+Math.round(p.width)+","+regions[i][0][0]));
-            p.testRegions.push(p.paper.path("M0," + regions[i][0][1] + " L"+Math.round(p.width)+","+regions[i][0][1]));
-            p.testRegions.push(p.paper.text((m===1 ? 1: 3)*p.width/4,(regions[i][0][0] + regions[i][0][1])/2, regions[i][1]));
+            p.testRegions.push(p.paper.append("path")
+              .attr("d", "M0," + regions[i][0][0] + " L"+Math.round(p.width)+","+regions[i][0][0]));
+            p.testRegions.push(p.paper.append("path")
+              .attr("d", "M0," + regions[i][0][1] + " L"+Math.round(p.width)+","+regions[i][0][1]));
+            p.testRegions.push(p.paper.append("text")
+              .attr("x", (m===1 ? 1: 3)*p.width/4)
+              .attr("y", (regions[i][0][0] + regions[i][0][1])/2)
+              .text(regions[i][1])
+            );
         }
     }
     var m = p.options.labelAreaPosition==="left" ? 1: -1;
@@ -299,18 +315,21 @@ module.exports = function(p, selector) {
         };
         var region;
         function getSectorCenter(s, y) {
+          console.log(s, y);
             function angle(v) {
                 return 360*v/p.sectorMeta[s].total + p.options.startAngle;
             }
             var theta0 = angle(p.sectorMeta[s].start),
                 theta1 = angle(p.sectorMeta[s].start + p.sectorMeta[s].value),
                 midpoint;
+            console.log(y, theta0, theta1, p.baseRx, p.baseRy, center[0], center[1]);
             var points = horizontalIntersectWithSector(y, theta0, theta1, p.baseRx, p.baseRy, center[0], center[1]);
             if (points.length === 1) {
                 midpoint = points[0];
             } else {
                 midpoint = (points[0] + points[1])/2;
             }
+            console.log(points);
             return [midpoint, y];
         }
         function getSectorArcCenter(s) {
@@ -434,6 +453,7 @@ module.exports = function(p, selector) {
             sector = order[positionInOrder];
             sectorsLeft--;
         }
+        console.log(r);
         return r;
     }
     var labelCoords = getLabelCoords();

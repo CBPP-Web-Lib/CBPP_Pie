@@ -1,11 +1,24 @@
 /*globals module*/
-module.exports = function($, Raphael) {
+module.exports = function($, d3) {
 	"use strict";
 	var CBPP_Pie = {};
 	require("./pie.css");
 	CBPP_Pie.ListWithLinesLabel = require("./listWithLinesLabels.js");
 	CBPP_Pie.ListWithLegend = require("./listWithLegend.js");
-
+	CBPP_Pie.pathStringFromPoints = function(p) {
+		var r = [];
+		for (var i = 0, ii = p.length; i<ii; i++) {
+			r[i] = [].concat(p[i]);
+			for (var j = 1, jj = r[i].length; j<jj; j++) {
+				r[i][j] = Math.round(r[i][j]*10000)/10000;
+			}
+			var command = r[i][0];
+			r[i].splice(0, 1);
+			r[i] = command + r[i].join(",");
+		}
+		r = r.join("");
+		return r;
+	};
 	CBPP_Pie.DefaultColors = [
 		"#0081a4",
 		"#eb9123",
@@ -20,7 +33,20 @@ module.exports = function($, Raphael) {
 		var p = this;
 		$(selector).addClass("CBPP_Pie");
 		$(selector).empty();
-		this.paper = new Raphael($(selector)[0], $(selector).width(), $(selector).height());
+
+		function applyAttr(obj, props) {
+			for (var prop in props) {
+				if (props.hasOwnProperty(props)) {
+					obj.attr(prop, props[prop]);
+				}
+			}
+		}
+
+		this.paper = d3.select(selector).append("svg")
+			.attr("width", $(selector).width())
+			.attr("height", $(selector).height());
+
+		//this.paper = new Raphael($(selector)[0], $(selector).width(), $(selector).height());
 		this.data = [];
 		/*defaults*/
 		this.options = {
@@ -61,8 +87,8 @@ module.exports = function($, Raphael) {
 		this.labelLines = [];
 		this.sectorMeta = [];
 		this.sectorAnimations = [];
-		this.sectorsByRaphaelID = [];
-		this.labelsByRaphaelID = [];
+		this.sectorsByID = [];
+		this.labelsByID = [];
 		this.highlighted = [];
 		this.animations = [];
 		$.extend(true, this.data, data);
@@ -109,7 +135,7 @@ module.exports = function($, Raphael) {
 						x: m*(p.maxLabelWidth) + offset,
 						"text-anchor" : textAlign
 					};
-					p.labelObjs[i].attr(attr);
+					applyAttr(p.labelObjs[i], attr);
 				}
 				fixLabelLineHeight();
 			}
@@ -119,9 +145,9 @@ module.exports = function($, Raphael) {
 			function fixLabelLineHeight() {
 				var dy;
 				for (var i = 0, ii = p.labelObjs.length; i<ii; i++) {
-					for (var cN = 1, nCN = p.labelObjs[i].node.childNodes.length; cN<nCN;cN++) {
-						dy = p.labelObjs[i].node.childNodes[cN].getAttribute("dy")*p.options.labelLineHeight;
-						p.labelObjs[i].node.childNodes[cN].setAttribute("dy",dy);
+					for (var cN = 1, nCN = p.labelObjs[i].node().childNodes.length; cN<nCN;cN++) {
+						dy = p.labelObjs[i].node().childNodes[cN].getAttribute("dy")*p.options.labelLineHeight;
+						p.labelObjs[i].node().childNodes[cN].setAttribute("dy",dy);
 					}
 				}
 			}
@@ -131,7 +157,7 @@ module.exports = function($, Raphael) {
 					width = p.options.minLabelWidth;
 				}
 				for (var i = 0, ii = p.labelObjs.length; i<ii; i++) {
-					width = Math.max(width, p.labelObjs[i].getBBox().width);
+					width = Math.max(width, p.labelObjs[i].node().getBBox().width);
 				}
 				return width;
 			}
@@ -264,7 +290,7 @@ module.exports = function($, Raphael) {
 				p.sectorMeta[dataIndex].customRy = ry;
 				if (p.animating===false || typeof(p.animating)==="undefined") {
 					var path = getPath(_attrs);
-					s.attr({path:path});
+					s.attr("d",path);
 				}
 				if (lastFrame) {
 					p.sectorMeta[dataIndex].isAnimating = false;
@@ -286,17 +312,17 @@ module.exports = function($, Raphael) {
 		}
 
 		var mouseover = function() {
-			p.inSector = p.sectorsByRaphaelID[this.id];
+			p.inSector = p.sectorsByID[this.id];
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
 		var labelmouseover = function() {
-			p.inSector = p.labelsByRaphaelID[this.id];
+			p.inSector = p.labelsByID[this.id];
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
 		var mouseout = function() {
-			p.outSector = p.sectorsByRaphaelID[this.id];
+			p.outSector = p.sectorsByID[this.id];
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
@@ -316,7 +342,7 @@ module.exports = function($, Raphael) {
 		}
 
 		var labelmouseout = function() {
-			p.outSector = p.labelsByRaphaelID[this.id];
+			p.outSector = p.labelsByID[this.id];
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
@@ -408,23 +434,24 @@ module.exports = function($, Raphael) {
 			} else {
 				text = p.options.labelFormatter(i, d, t);
 			}
-
 			if (typeof(p.labelObjs[i])==="undefined") {
-
-				p.labelObjs[i] = p.paper.text(center[0], center[1], text).attr(font).click(clickWrap);
-				p.labelObjs[i].mouseover(labelmouseover);
-				p.labelObjs[i].mouseout(labelmouseout);
+				p.labelObjs[i] = p.paper.append("text")
+					.attr("x",center[0])
+					.attr("y", center[1])
+					.text(text)
+					.on("click",clickWrap);
+				applyAttr(p.labelObjs[i],font);
+				p.labelObjs[i].on("mouseover",labelmouseover);
+				p.labelObjs[i].on("mouseout",labelmouseout);
 			} else {
-				p.labelObjs[i].attr({
-					x: center[0],
-					y: center[1],
-					text: text
-				});
-				p.labelObjs[i].attr(font);
+				p.labelObjs[i]
+					.attr("x",center[0])
+					.attr("y",center[1])
+					.text(text);
+				applyAttr(p.labelObjs[i],font);
 			}
+			p.labelsByID[p.labelObjs[i].id] = i;
 
-
-			p.labelsByRaphaelID[p.labelObjs[i].id] = i;
 		}
 		function findLabelWidth(i) {
 			return $(p.labelObjs[i].node).width()*1.1;
@@ -443,15 +470,15 @@ module.exports = function($, Raphael) {
 				}
 			}
 			if (typeof(line)!=="undefined") {
-
+				console.log(line);
 				var pathString = "M" + c(line[0][0]) + "," + c(line[0][1]);
 				for (var j = 1, jj = line.length; j<jj; j++) {
 					pathString += "L" + c(line[j][0]) + "," + c(line[j][1]);
 				}
 				if (typeof(p.labelLines[i])==="undefined") {
-					p.labelLines[i] = p.paper.path(pathString);
+					p.labelLines[i] = p.paper.append("path").attr("d",pathString);
 				} else {
-					p.labelLines[i].attr({path:pathString});
+					p.labelLines[i].attr("d",pathString);
 				}
 			} else {
 				if (typeof(p.labelLines[i])!=="undefined") {
@@ -463,12 +490,12 @@ module.exports = function($, Raphael) {
 		var clickWrap = function(event, x, y) {
 			if (typeof(p.options.click)==="function") {
 				var meta, dataIndex;
-				if (typeof(p.sectorsByRaphaelID[this.id])!=="undefined") {
-					dataIndex = p.sectorsByRaphaelID[this.id];
+				if (typeof(p.sectorsByID[this.id])!=="undefined") {
+					dataIndex = p.sectorsByID[this.id];
 					meta = p.sectorMeta[dataIndex];
 				}
-				if (typeof(p.labelsByRaphaelID[this.id])!=="undefined") {
-					dataIndex = p.labelsByRaphaelID[this.id];
+				if (typeof(p.labelsByID[this.id])!=="undefined") {
+					dataIndex = p.labelsByID[this.id];
 					meta = p.sectorMeta[dataIndex];
 				}
 				p.options.click.apply(this, [dataIndex, meta, event, x, y]);
@@ -505,9 +532,10 @@ module.exports = function($, Raphael) {
 			$.extend(true, p.sectorMeta[i], attrs);
 
 			if (typeof(p.sectorObjs[i])==="undefined") {
-				p.sectorObjs[i] = sector(attrs, d.options).click(clickWrap);
-				p.sectorObjs[i].mouseover(mouseover);
-				p.sectorObjs[i].mouseout(mouseout);
+				p.sectorObjs[i] = sector(attrs, d.options)
+					.on("click",clickWrap)
+					.on("mouseover",mouseover)
+					.on("mouseout",mouseout);
 			} else {
 				/*object exists already*/
 				var oldType = p.sectorObjs[i].type;
@@ -521,7 +549,7 @@ module.exports = function($, Raphael) {
 					sector(attrs, d.options, p.sectorObjs[i]);
 				}
 			}
-			p.sectorsByRaphaelID[p.sectorObjs[i].id] = i;
+			p.sectorsByID[p.sectorObjs[i].id] = i;
 		}
 		function getTotal(data) {
 			var t = 0;
@@ -550,28 +578,33 @@ module.exports = function($, Raphael) {
 			}
 			if (circleThreshold(i)) {
 				var c = {
-					x: i.xloc,
-					y: i.yloc,
+					cx: i.xloc,
+					cy: i.yloc,
 					rx: i.rx,
 					ry: i.ry
 				};
+
 				if (typeof(existingObject)!=="undefined") {
-					existingObject.attr(c);
-					existingObject.attr(attr);
+					applyAttr(existingObject, c);
+					applyAttr(existingObject, attr);
 					return existingObject;
 				} else {
-					return p.paper.ellipse(c.x, c.y, c.rx, c.ry).attr(attr);
+					var ellipse = p.paper.append("ellipse");
+					applyAttr(ellipse, c);
+					applyAttr(ellipse, attr);
+					return ellipse;
 				}
 			} else {
 				var path = getPath(i);
 				if (typeof(existingObject)!=="undefined") {
-					existingObject.attr({
-						path: path
-					});
-					existingObject.attr(attr);
+					existingObject.attr("d",path);
+					applyAttr(existingObject, attr);
 					return existingObject;
 				} else {
-					return p.paper.path(path).attr(attr);
+					var pathel = p.paper.append("path");
+					pathel.attr("d",path);
+					applyAttr(pathel, attr);
+					return pathel;
 				}
 			}
 		}
@@ -590,7 +623,7 @@ module.exports = function($, Raphael) {
 				["A", i.rx, i.ry, 0, +(alpha - startAlpha > 180), 0, x, y],
 				["L", i.xloc, i.yloc]
 			];
-			return path;
+			return CBPP_Pie.pathStringFromPoints(path);
 		}
 		this.draw();
 		this.destroy = function() {
