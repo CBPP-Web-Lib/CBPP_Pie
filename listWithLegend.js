@@ -1,4 +1,4 @@
-/*globals CBPP*/
-module.exports = function(p, selector) {
-    console.log(p);
-};
+module.exports = function($) {
+return function(p, selector) {
+  console.log(p);
+};};

@@ -3,8 +3,8 @@ module.exports = function($, Raphael) {
 	"use strict";
 	var CBPP_Pie = {};
 	require("./pie.css");
-	CBPP_Pie.ListWithLinesLabel = require("./listWithLinesLabels.js");
-	CBPP_Pie.ListWithLegend = require("./listWithLegend.js");
+	CBPP_Pie.ListWithLinesLabel = require("./listWithLinesLabels.js")($);
+	CBPP_Pie.ListWithLegend = require("./listWithLegend.js")($);
 
 	CBPP_Pie.DefaultColors = [
 		"#0081a4",
