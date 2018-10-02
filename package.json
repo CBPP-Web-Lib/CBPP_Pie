@@ -1,5 +1,5 @@
 {
-  "name": "cbpp_map",
+  "name": "cbpp_pie",
   "version": "0.8.0",
   "description": "Wrapper for CBPP Pie Charts",
   "main": "cbpp_pie.js",
