@@ -1,5 +1,5 @@
 /*globals module*/
-module.exports = function($, Raphael) {
+module.exports = function($, d3) {
 	"use strict";
 	var CBPP_Pie = {};
 	require("./pie.css");
@@ -20,7 +20,7 @@ module.exports = function($, Raphael) {
 		var p = this;
 		$(selector).addClass("CBPP_Pie");
 		$(selector).empty();
-		this.paper = new Raphael($(selector)[0], $(selector).width(), $(selector).height());
+		this.paper = d3.select(selector).append("svg")/*.attr("viewBox","0 0 " + $(selector).width() + " " + $(selector).height())*/;
 		this.data = [];
 		/*defaults*/
 		this.options = {
@@ -35,7 +35,7 @@ module.exports = function($, Raphael) {
 			labelAreaPosition: "left",
 			labelLineSeparation:1,
 			labelLineHeight:1,
-			labelSeparation:1,
+			labelSeparation:1, 
 			forceSquare: false,
 			startAngle: 0,
 			hoverEasing: (function() {
@@ -61,8 +61,6 @@ module.exports = function($, Raphael) {
 		this.labelLines = [];
 		this.sectorMeta = [];
 		this.sectorAnimations = [];
-		this.sectorsByRaphaelID = [];
-		this.labelsByRaphaelID = [];
 		this.highlighted = [];
 		this.animations = [];
 		$.extend(true, this.data, data);
@@ -109,7 +107,7 @@ module.exports = function($, Raphael) {
 						x: m*(p.maxLabelWidth) + offset,
 						"text-anchor" : textAlign
 					};
-					p.labelObjs[i].attr(attr);
+					applyAttr(p.labelObjs[i],attr);
 				}
 				fixLabelLineHeight();
 			}
@@ -119,9 +117,9 @@ module.exports = function($, Raphael) {
 			function fixLabelLineHeight() {
 				var dy;
 				for (var i = 0, ii = p.labelObjs.length; i<ii; i++) {
-					for (var cN = 1, nCN = p.labelObjs[i].node.childNodes.length; cN<nCN;cN++) {
-						dy = p.labelObjs[i].node.childNodes[cN].getAttribute("dy")*p.options.labelLineHeight;
-						p.labelObjs[i].node.childNodes[cN].setAttribute("dy",dy);
+					for (var cN = 1, nCN = p.labelObjs[i].node().childNodes.length; cN<nCN;cN++) {
+						dy = p.labelObjs[i].node().childNodes[cN].getAttribute("dy")*p.options.labelLineHeight;
+						p.labelObjs[i].node().childNodes[cN].setAttribute("dy",dy);
 					}
 				}
 			}
@@ -264,7 +262,7 @@ module.exports = function($, Raphael) {
 				p.sectorMeta[dataIndex].customRy = ry;
 				if (p.animating===false || typeof(p.animating)==="undefined") {
 					var path = getPath(_attrs);
-					s.attr({path:path});
+					s.attr("d",path);
 				}
 				if (lastFrame) {
 					p.sectorMeta[dataIndex].isAnimating = false;
@@ -286,17 +284,17 @@ module.exports = function($, Raphael) {
 		}
 
 		var mouseover = function() {
-			p.inSector = p.sectorsByRaphaelID[this.id];
+			p.inSector = $(this).attr("data-index")*1;
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
 		var labelmouseover = function() {
-			p.inSector = p.labelsByRaphaelID[this.id];
+			p.inSector = $(this).attr("data-index")*1;
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
 		var mouseout = function() {
-			p.outSector = p.sectorsByRaphaelID[this.id];
+			p.inSector = $(this).attr("data-index")*1;
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
@@ -316,7 +314,7 @@ module.exports = function($, Raphael) {
 		}
 
 		var labelmouseout = function() {
-			p.outSector = p.labelsByRaphaelID[this.id];
+			p.outSector = $(this).attr("data-index");
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
@@ -396,6 +394,15 @@ module.exports = function($, Raphael) {
 				return CBPP_Pie.ListWithLinesLabel(p,selector);
 			}
 		};
+
+		function applyAttr(obj, attr) {
+			for (var prop in attr) {
+				if (attr.hasOwnProperty(prop)) {
+					obj.attr(prop, attr[prop]);
+				}
+			}
+		}
+
 		function makeLabel(i, d, t, center) {
 			var font = {
 				"font-size":$(selector).css("font-size"),
@@ -411,23 +418,28 @@ module.exports = function($, Raphael) {
 
 			if (typeof(p.labelObjs[i])==="undefined") {
 
-				p.labelObjs[i] = p.paper.text(center[0], center[1], text).attr(font).click(clickWrap);
-				p.labelObjs[i].mouseover(labelmouseover);
-				p.labelObjs[i].mouseout(labelmouseout);
+				p.labelObjs[i] = p.paper.append("text")
+					.text(text)
+					.attr("x",center[0])
+					.attr("y",center[1])
+					.attr("font-size",font["font-size"])
+					.attr("font-family",font["font-family"])
+					.attr("text-anchor",font["text-anchor"])
+					.on("click",clickWrap);
+				p.labelObjs[i].on("mouseover",labelmouseover);
+				p.labelObjs[i].on("mouseout",labelmouseout);
 			} else {
-				p.labelObjs[i].attr({
-					x: center[0],
-					y: center[1],
-					text: text
-				});
-				p.labelObjs[i].attr(font);
+				p.labelObjs[i]
+					.attr("x", center[0])
+					.attr("y",center[1])
+					.text(text);
+				applyAttr(p.labelObjs[i],font);
 			}
 
-
-			p.labelsByRaphaelID[p.labelObjs[i].id] = i;
+			p.labelObjs[i].attr("data-index",i);
 		}
 		function findLabelWidth(i) {
-			return $(p.labelObjs[i].node).width()*1.1;
+			return $(p.labelObjs[i].node()).width()*1.1;
 		}
 		function drawLabelLines(i, d, t, line) {
 
@@ -449,9 +461,9 @@ module.exports = function($, Raphael) {
 					pathString += "L" + c(line[j][0]) + "," + c(line[j][1]);
 				}
 				if (typeof(p.labelLines[i])==="undefined") {
-					p.labelLines[i] = p.paper.path(pathString);
+					p.labelLines[i] = p.paper.append("path").attr("d",pathString);
 				} else {
-					p.labelLines[i].attr({path:pathString});
+					p.labelLines[i].attr("d",pathString);
 				}
 			} else {
 				if (typeof(p.labelLines[i])!=="undefined") {
@@ -462,15 +474,8 @@ module.exports = function($, Raphael) {
 		}
 		var clickWrap = function(event, x, y) {
 			if (typeof(p.options.click)==="function") {
-				var meta, dataIndex;
-				if (typeof(p.sectorsByRaphaelID[this.id])!=="undefined") {
-					dataIndex = p.sectorsByRaphaelID[this.id];
-					meta = p.sectorMeta[dataIndex];
-				}
-				if (typeof(p.labelsByRaphaelID[this.id])!=="undefined") {
-					dataIndex = p.labelsByRaphaelID[this.id];
-					meta = p.sectorMeta[dataIndex];
-				}
+				var meta, dataIndex = $(this).attr("data-index");
+				meta = p.sectorMeta[dataIndex];
 				p.options.click.apply(this, [dataIndex, meta, event, x, y]);
 			}
 		};
@@ -503,25 +508,24 @@ module.exports = function($, Raphael) {
 				p.sectorMeta[i] = {};
 			}
 			$.extend(true, p.sectorMeta[i], attrs);
-
 			if (typeof(p.sectorObjs[i])==="undefined") {
-				p.sectorObjs[i] = sector(attrs, d.options).click(clickWrap);
-				p.sectorObjs[i].mouseover(mouseover);
-				p.sectorObjs[i].mouseout(mouseout);
+				p.sectorObjs[i] = sector(attrs, d.options).on("click",clickWrap);
+				p.sectorObjs[i].on("mouseover",mouseover);
+				p.sectorObjs[i].on("mouseout",mouseout);
 			} else {
 				/*object exists already*/
 				var oldType = p.sectorObjs[i].type;
 				var newType = circleThreshold(attrs) ? "ellipse" : "path";
 				if (oldType !== newType) {
 					p.sectorObjs[i].remove();
-					p.sectorObjs[i] = sector(attrs, d.options).click(clickWrap);
-					p.sectorObjs[i].mouseover(mouseover);
-					p.sectorObjs[i].mouseout(mouseout);
+					p.sectorObjs[i] = sector(attrs, d.options).on("click",clickWrap);
+					p.sectorObjs[i].on("mouseover",mouseover);
+					p.sectorObjs[i].on("mouseout",mouseout);
 				} else {
 					sector(attrs, d.options, p.sectorObjs[i]);
 				}
 			}
-			p.sectorsByRaphaelID[p.sectorObjs[i].id] = i;
+			p.sectorObjs[i].attr("data-index",i);
 		}
 		function getTotal(data) {
 			var t = 0;
@@ -531,7 +535,6 @@ module.exports = function($, Raphael) {
 			return t;
 		}
 		function sector(i, d, existingObject) {
-			//console.log(i);
 			var attr = {
 				"stroke" : "#000",
 				"stroke-width" : 2,
@@ -539,7 +542,7 @@ module.exports = function($, Raphael) {
 			};
 			var props = ["stroke", "stroke-width","fill"];
 			var pL = props.length;
-
+			var o;
 			for (var j = 0; j<pL;j++) {
 				if (typeof(p.options[props[j]])==="undefined") {
 					attr[props[j]] = p.options[props[j]];
@@ -556,22 +559,31 @@ module.exports = function($, Raphael) {
 					ry: i.ry
 				};
 				if (typeof(existingObject)!=="undefined") {
-					existingObject.attr(c);
-					existingObject.attr(attr);
+					applyAttr(existingObject,c);
+					applyAttr(existingObject,attr);
 					return existingObject;
 				} else {
-					return p.paper.ellipse(c.x, c.y, c.rx, c.ry).attr(attr);
+					o = p.paper.append("circle");
+					applyAttr(o, c);
+					applyAttr(o, attr);
+					return o;
 				}
 			} else {
 				var path = getPath(i);
 				if (typeof(existingObject)!=="undefined") {
-					existingObject.attr({
-						path: path
-					});
-					existingObject.attr(attr);
+					existingObject.attr(
+						"d", path
+					);
+					applyAttr(existingObject,attr);
 					return existingObject;
 				} else {
-					return p.paper.path(path).attr(attr);
+					o = p.paper.append("path")
+						.attr("d",path)
+						.attr("stroke",attr.stroke)
+						.attr("stroke-width",attr["stroke-width"])
+						.attr("fill",attr.fill);
+					return o;
+					//return p.paper.path(path).attr(attr);
 				}
 			}
 		}
@@ -584,12 +596,11 @@ module.exports = function($, Raphael) {
 				x = i.xloc + i.rx * Math.sin(a),
 				y = i.yloc - i.ry * Math.cos(a),
 				path;
-			path = [
-				["M", i.xloc, i.yloc],
-				["l", i.rx*Math.sin(s), i.ry*Math.cos(s)],
-				["A", i.rx, i.ry, 0, +(alpha - startAlpha > 180), 0, x, y],
-				["L", i.xloc, i.yloc]
-			];
+			path = 
+				"M" + [i.xloc, i.yloc].join(",") +
+				"l" + [i.rx*Math.sin(s), i.ry*Math.cos(s)].join(",") +
+				"A" + [i.rx, i.ry, 0, +(alpha - startAlpha > 180), 0, x, y].join(",") + 
+				"L" + [i.xloc, i.yloc];
 			return path;
 		}
 		this.draw();
