@@ -129,7 +129,7 @@ module.exports = function($, d3) {
 					width = p.options.minLabelWidth;
 				}
 				for (var i = 0, ii = p.labelObjs.length; i<ii; i++) {
-					width = Math.max(width, p.labelObjs[i].getBBox().width);
+					width = Math.max(width, p.labelObjs[i].node().getBBox().width);
 				}
 				return width;
 			}
@@ -415,9 +415,8 @@ module.exports = function($, d3) {
 			} else {
 				text = p.options.labelFormatter(i, d, t);
 			}
-
+			
 			if (typeof(p.labelObjs[i])==="undefined") {
-
 				p.labelObjs[i] = p.paper.append("text")
 					.text(text)
 					.attr("x",center[0])
@@ -454,8 +453,8 @@ module.exports = function($, d3) {
 					return Math.round(n);
 				}
 			}
+		
 			if (typeof(line)!=="undefined") {
-
 				var pathString = "M" + c(line[0][0]) + "," + c(line[0][1]);
 				for (var j = 1, jj = line.length; j<jj; j++) {
 					pathString += "L" + c(line[j][0]) + "," + c(line[j][1]);

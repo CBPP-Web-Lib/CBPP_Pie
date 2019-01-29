@@ -120,11 +120,22 @@ module.exports = function($) {
               }
           }
           for (var i = 0, ii = p.sectorObjs.length; i<ii; i++) {
-              path = p.sectorObjs[i].attr("path");
+              path = p.sectorObjs[i].attr("d");
+              path = path.split(/(?=[LMCAlmca])/g);
+              for (var j = 0, jj = path.length;j<jj;j++) {
+                    var command = path[j].charAt(0);
+                    path[j] = path[j].split(",");
+
+                    for (var k = 0, kk = path[j].length;k<kk;k++) {
+                        path[j][k] = Number(path[j][k].substr(1));
+                    }
+                    path[j] = [command].concat(path[j]);
+              }
               center = [path[0][1], path[0][2]];
+             
               top = p.options["margin-y"]*p.height;
               bottom = p.height - p.options["margin-y"]*p.height;
-              p1 = [path[1][1], path[1][2]];
+              p1 = [center[0] + path[1][1], center[1] + path[1][2]];
               p2 = [path[2][6], path[2][7]];
               if (side === "right") {
                   swap = p1;
@@ -455,9 +466,10 @@ module.exports = function($) {
           return r;
       }
       var labelCoords = getLabelCoords();
+      var lines = getLines(labelOrder, labelCoords, labelSideRegions, farSideRegions, center);
       return {
           labels: labelCoords,
-          lines: getLines(labelOrder, labelCoords, labelSideRegions, farSideRegions, center)
+          lines: lines
       };
     };
     };
