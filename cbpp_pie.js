@@ -108,8 +108,13 @@ module.exports = function($, d3) {
 						"text-anchor" : textAlign
 					};
 					applyAttr(p.labelObjs[i],attr);
+					p.labelObjs[i].selectAll("tspan").each(function(d, i) {
+						if (i>0) {
+							applyAttr(d3.select(this), attr);
+						}
+					});
 				}
-				fixLabelLineHeight();
+				//fixLabelLineHeight();
 			}
 			for (i = 0, ii = this.data.length; i<ii; i++) {
 				drawLabelLines(i, this.data[i], total, locations.lines[i]);
@@ -415,10 +420,44 @@ module.exports = function($, d3) {
 			} else {
 				text = p.options.labelFormatter(i, d, t);
 			}
-			
+			text = text.split("\n");
+			function makeTspans(labelObj, textarr) {
+				if (typeof(labelObj)==="undefined") {
+					labelObj = p.paper.append("text");
+				}
+				labelObj.selectAll("tspan").remove();
+				labelObj.selectAll("tspan")
+					.data(text)
+					.enter()
+					.append("tspan")
+					.text(function(d) {
+						return d;
+					})
+					.attr("dy", function(d, i) {
+						var height = font["font-size"].replace("px","")*p.options.labelLineHeight;
+						if (i===0) {
+							return (0-text.length * height)/3 + height/2;
+						} else {
+							return height;
+						}
+					})
+					.attr("x", function(d, i) {
+						if (i===0) {
+							return null;
+						} else {
+							return center[0];
+						}
+					});
+				return labelObj;
+			}
 			if (typeof(p.labelObjs[i])==="undefined") {
-				p.labelObjs[i] = p.paper.append("text")
-					.text(text)
+				if (text.length === 1) {
+					p.labelObjs[i] = p.paper.append("text")
+						.text(text[0]);
+				} else {
+					p.labelObjs[i] = makeTspans(p.labelObjs[i], text);
+				}
+				p.labelObjs[i]
 					.attr("x",center[0])
 					.attr("y",center[1])
 					.attr("font-size",font["font-size"])
@@ -430,8 +469,13 @@ module.exports = function($, d3) {
 			} else {
 				p.labelObjs[i]
 					.attr("x", center[0])
-					.attr("y",center[1])
-					.text(text);
+					.attr("y",center[1]);
+				if (text.length===1) {
+					p.labelObjs[i]
+						.text(text[0]);
+				} else {
+					p.labelObjs[i] = makeTspans(p.labelObjs[i], text);
+				}
 				applyAttr(p.labelObjs[i],font);
 			}
 
@@ -464,6 +508,8 @@ module.exports = function($, d3) {
 				} else {
 					p.labelLines[i].attr("d",pathString);
 				}
+				p.labelLines[i].attr("stroke","#000")
+					.attr("fill","none"); 
 			} else {
 				if (typeof(p.labelLines[i])!=="undefined") {
 					p.labelLines[i].remove();

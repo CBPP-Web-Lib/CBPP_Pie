@@ -105,13 +105,39 @@ module.exports = function($) {
               p.testPoints.push(testPoint);
           }
       }
-    
+      function pathStringToArr(pathString) {
+        var chunk;
+        var path = [];
+        function processFinishedChunk(chunk) {
+            if (chunk[1].length> 0) {
+                chunk[1] = chunk[1].split(",");
+                for (var n = 0,nn = chunk[1].length;n<nn;n++) {
+                    chunk[1][n] = Number(chunk[1][n]);
+                }
+                chunk = [chunk[0]].concat(chunk[1]);
+            }
+            return chunk;
+        }
+        for (var m = 0, mm = pathString.length;m<mm;m++) {
+          if (pathString.charAt(m).match(/[LMCAlmca]/)) {
+              if (chunk) {
+                chunk = processFinishedChunk(chunk);
+                path.push(chunk);  
+              }
+            chunk = [pathString.charAt(m), ""]; 
+          } else {
+            chunk[1] += pathString.charAt(m);
+          }
+        }
+        path.push(processFinishedChunk(chunk));
+        return path;
+      }
       function verticalRegions(side, inclusive) {
           /*if inclusive is set to false, we only get sectors completely on the side*/
           if (typeof(inclusive)==="undefined") {
               inclusive = true;
           }
-          var path, p1, p2, regions = [], top, bottom, pointType, bigSector, swap, center;
+          var path = [], pathString, p1, p2, regions = [], top, bottom, pointType, bigSector, swap, center;
           function include(p1, p2, center) {
               if (side === "near") {
                   return [m*p1[0] <= m*center[0], m*p2[0] <= m*center[0]];
@@ -119,20 +145,11 @@ module.exports = function($) {
                   return [m*p1[0] > m*center[0], m*p2[0] > m*center[0]];
               }
           }
+          
           for (var i = 0, ii = p.sectorObjs.length; i<ii; i++) {
-              path = p.sectorObjs[i].attr("d");
-              path = path.split(/(?=[LMCAlmca])/g);
-              for (var j = 0, jj = path.length;j<jj;j++) {
-                    var command = path[j].charAt(0);
-                    path[j] = path[j].split(",");
-
-                    for (var k = 0, kk = path[j].length;k<kk;k++) {
-                        path[j][k] = Number(path[j][k].substr(1));
-                    }
-                    path[j] = [command].concat(path[j]);
-              }
+              pathString = p.sectorObjs[i].attr("d");
+              path = pathStringToArr(pathString);
               center = [path[0][1], path[0][2]];
-             
               top = p.options["margin-y"]*p.height;
               bottom = p.height - p.options["margin-y"]*p.height;
               p1 = [center[0] + path[1][1], center[1] + path[1][2]];
@@ -196,11 +213,22 @@ module.exports = function($) {
           }
           p.testRegions = [];
           for (var i = 0, ii = regions.length; i<ii; i++) {
-              p.testRegions.push(p.paper.append("path").attr("d","M0," + regions[i][0][0] + " L"+Math.round(p.width)+","+regions[i][0][0]));
-              p.testRegions.push(p.paper.append("path").attr("d","M0," + regions[i][0][1] + " L"+Math.round(p.width)+","+regions[i][0][1]));
+              p.testRegions.push(
+                  p.paper.append("path")
+                    .attr("d","M0," + regions[i][0][0] + " L"+Math.round(p.width)+","+regions[i][0][0])
+                    .attr("class","testLine")
+                    .attr("stroke-width","1px")
+                    .attr("stroke","#000"));
+              p.testRegions.push(
+                  p.paper.append("path")
+                    .attr("d","M0," + regions[i][0][1] + " L"+Math.round(p.width)+","+regions[i][0][1])
+                    .attr("class","testLine")
+                    .attr("stroke-width","1px")
+                    .attr("stroke","#000"));
               p.testRegions.push(p.paper.append("text").text((m===1 ? 1: 3)*p.width/4)
                 .attr("x",(regions[i][0][0] + regions[i][0][1])/2)
-                .attr("y",regions[i][1]));
+                .attr("y",regions[i][1])
+                .attr("class","testLineLabel"));
           }
       }
       var m = p.options.labelAreaPosition==="left" ? 1: -1;
