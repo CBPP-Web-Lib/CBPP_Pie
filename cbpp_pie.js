@@ -299,7 +299,7 @@ module.exports = function($, d3) {
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
 		var mouseout = function() {
-			p.inSector = $(this).attr("data-index")*1;
+			p.outSector = $(this).attr("data-index")*1;
 			clearTimeout(p.changeTimer);
 			p.changeTimer = setTimeout(sectorChange, 1);
 		};
