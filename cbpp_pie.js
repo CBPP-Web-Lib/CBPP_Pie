@@ -18,6 +18,11 @@ module.exports = function($, d3) {
 
     CBPP_Pie.Pie = function(selector, data, options) {
 		var p = this;
+		if (typeof(selector)==="string") {
+			selector = $(selector)[0];
+		} else {
+			selector = selector[0];
+		}
 		$(selector).addClass("CBPP_Pie");
 		$(selector).empty();
 		this.paper = d3.select(selector).append("svg")/*.attr("viewBox","0 0 " + $(selector).width() + " " + $(selector).height())*/;
@@ -654,8 +659,8 @@ module.exports = function($, d3) {
 			$(window).off("resize", resizeFunction);
 		}
 		var resizeFunction = function() {
-			$(selector + " svg").attr("width", $(selector).width());
-			$(selector + " svg").attr("height", $(selector).height());
+			$(selector).find("svg").attr("width", $(selector).width());
+			$(selector).find("svg").attr("height", $(selector).height());
 			p.draw();
 		};
 		$(window).on("resize", resizeFunction);
