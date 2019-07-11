@@ -143,13 +143,21 @@ module.exports = function($, d3) {
 				}
 				return width;
 			}
+			this.paper.selectAll("path[data-index]").lower();
 		};
 		this.animateTo = function(newDataAndOptions, duration, callback) {
 			var newData = newDataAndOptions.data;
 			var newOptions = newDataAndOptions.options;
+			var easing = function(x) {
+				return x;
+			};
+			if (typeof(duration)==="object") {
+				easing = duration.easing;
+				duration = duration.duration;
+			}
 			this.animating = true;
 			function interpolate(p, obj1, obj2) {
-                var i, ii, r;
+								var i, ii, r;
                 if (Object.prototype.toString.call(obj1) === "[object Array]" && Object.prototype.toString.call(obj2) === "[object Array]") {
                     //array loop
                     r = [];
@@ -200,8 +208,9 @@ module.exports = function($, d3) {
 						callback();
 					}
 				}
-				p.data = interpolate(pr, start_data, newData);
-				p.options = interpolate(pr, start_options, newOptions);
+				var eased_pr = easing(pr);
+				p.data = interpolate(eased_pr, start_data, newData);
+				p.options = interpolate(eased_pr, start_options, newOptions);
 				p.draw();
 			}, FRAME_DURATION);
 			return interval;
@@ -418,6 +427,7 @@ module.exports = function($, d3) {
 				"font-size":$(selector).css("font-size"),
 				"font-family":$(selector).css("font-family"),
 				"text-anchor": p.options.labelLocation === "internal" ? "center" : (p.options.labelAreaPosition === "left" ? "start" : "end")
+				
 			};
 			var text;
 			if (typeof(d.customLabel)!=="undefined") {
@@ -455,6 +465,10 @@ module.exports = function($, d3) {
 					});
 				return labelObj;
 			}
+			var offset = [0,0];
+			if (d.options.labelOffset) {
+				offset = d.options.labelOffset;
+			}
 			if (typeof(p.labelObjs[i])==="undefined") {
 				if (text.length === 1) {
 					p.labelObjs[i] = p.paper.append("text")
@@ -463,18 +477,22 @@ module.exports = function($, d3) {
 					p.labelObjs[i] = makeTspans(p.labelObjs[i], text);
 				}
 				p.labelObjs[i]
-					.attr("x",center[0])
-					.attr("y",center[1])
+					.attr("x",center[0] + offset[0])
+					.attr("y",center[1] + offset[1])
 					.attr("font-size",font["font-size"])
 					.attr("font-family",font["font-family"])
 					.attr("text-anchor",font["text-anchor"])
 					.on("click",clickWrap);
+				if (d.options.labelColor) {
+					p.labelObjs[i]
+						.attr("fill",d.options.labelColor);
+				}
 				p.labelObjs[i].on("mouseover",labelmouseover);
 				p.labelObjs[i].on("mouseout",labelmouseout);
 			} else {
 				p.labelObjs[i]
-					.attr("x", center[0])
-					.attr("y",center[1]);
+					.attr("x", center[0] + offset[0])
+					.attr("y",center[1] + offset[1]);
 				if (text.length===1) {
 					p.labelObjs[i]
 						.text(text[0]);
