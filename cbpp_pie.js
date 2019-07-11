@@ -145,7 +145,7 @@ module.exports = function($, d3) {
 			}
 			this.paper.selectAll("path[data-index]").lower();
 		};
-		this.animateTo = function(newDataAndOptions, duration, callback) {
+		this.animateTo = function(newDataAndOptions, duration, callback, eachFrame) {
 			var newData = newDataAndOptions.data;
 			var newOptions = newDataAndOptions.options;
 			var easing = function(x) {
@@ -212,6 +212,9 @@ module.exports = function($, d3) {
 				p.data = interpolate(eased_pr, start_data, newData);
 				p.options = interpolate(eased_pr, start_options, newOptions);
 				p.draw();
+				if (typeof(eachFrame)==="function") {
+					eachFrame();
+				}
 			}, FRAME_DURATION);
 			return interval;
 		};
@@ -435,7 +438,11 @@ module.exports = function($, d3) {
 			} else {
 				text = p.options.labelFormatter(i, d, t);
 			}
-			text = text.split("\n");
+			if (text) {
+				text = text.split("\n");
+			} else {
+				text = [];
+			}
 			function makeTspans(labelObj, textarr) {
 				if (typeof(labelObj)==="undefined") {
 					labelObj = p.paper.append("text");
