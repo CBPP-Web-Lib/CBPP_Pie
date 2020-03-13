@@ -429,7 +429,7 @@ module.exports = function($, d3) {
 			var font = {
 				"font-size":$(selector).css("font-size"),
 				"font-family":$(selector).css("font-family"),
-				"text-anchor": p.options.labelLocation === "internal" ? "center" : (p.options.labelAreaPosition === "left" ? "start" : "end")
+				"text-anchor": p.options.labelLocation === "internal" ? "middle" : (p.options.labelAreaPosition === "left" ? "start" : "end")
 				
 			};
 			var text;
