@@ -628,8 +628,8 @@ module.exports = function($, d3) {
 			}
 			if (circleThreshold(i)) {
 				var c = {
-					x: i.xloc,
-					y: i.yloc,
+					cx: i.xloc,
+					cy: i.yloc,
 					rx: i.rx,
 					ry: i.ry
 				};
@@ -638,7 +638,7 @@ module.exports = function($, d3) {
 					applyAttr(existingObject,attr);
 					return existingObject;
 				} else {
-					o = p.paper.append("circle");
+					o = p.paper.append("ellipse");
 					applyAttr(o, c);
 					applyAttr(o, attr);
 					return o;
